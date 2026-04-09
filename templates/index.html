@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Doc Assist AI</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>Doc Assist AI</h2>
+            </div>
+            
+            <div class="upload-section">
+                <label for="file-upload" class="upload-btn">
+                    <span>+ Upload Document</span>
+                </label>
+                <input type="file" id="file-upload" accept=".pdf,.txt" hidden>
+            </div>
+            
+            <div class="documents-list" id="documents-list">
+                <h3>Recent Documents</h3>
+                <ul id="doc-ul">
+                    <!-- Dynamic doc list -->
+                </ul>
+            </div>
+        </aside>
+        
+        <!-- Main Area -->
+        <main class="chat-area">
+            <div class="chat-header">
+                <h3 id="current-doc-title">No Document Selected</h3>
+                <div id="doc-meta" class="doc-meta">Please upload a document to begin.</div>
+            </div>
+            
+            <div class="chat-history" id="chat-history">
+                <div class="message bot">
+                    <div class="msg-content">Hello! I'm your AI Legal Assistant. Upload a document and ask me anything about it.</div>
+                </div>
+            </div>
+            
+            <div class="chat-input-wrapper">
+                <form id="chat-form">
+                    <input type="text" id="chat-input" placeholder="Ask a question about the document..." disabled>
+                    <button type="submit" id="send-btn" disabled>Send</button>
+                </form>
+            </div>
+        </main>
+    </div>
+    <script src="/static/app.js"></script>
+</body>
+</html>
