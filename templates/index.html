@@ -51,6 +51,23 @@
             </div>
         </main>
     </div>
-    <script src="/static/app.js"></script>
+            <!-- Modals for showing selected sentences and processing steps -->
+            <div id="sentences-modal" class="modal" aria-hidden="true">
+                <div class="modal-content">
+                    <button class="modal-close" id="close-sentences">✕</button>
+                    <h4>Selected Sentences</h4>
+                    <div id="sentences-body" class="modal-body"></div>
+                </div>
+            </div>
+
+            <div id="process-modal" class="modal" aria-hidden="true">
+                <div class="modal-content">
+                    <button class="modal-close" id="close-process">✕</button>
+                    <h4>Processing Details (Tokenization / Normalization / Embeddings)</h4>
+                    <div id="process-body" class="modal-body"></div>
+                </div>
+            </div>
+
+            <script src="/static/app.js"></script>
 </body>
 </html>

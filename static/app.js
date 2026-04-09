@@ -24,6 +24,7 @@ function appendMessage(sender, text) {
     msgDiv.appendChild(contentDiv);
     chatHistory.appendChild(msgDiv);
     chatHistory.scrollTop = chatHistory.scrollHeight;
+    return msgDiv;
 }
 
 function appendLoader() {
@@ -130,7 +131,103 @@ async function handleQuery(e) {
         chatInput.focus();
 
         if (res.ok) {
-            appendMessage('bot', data.answer);
+                const botMsg = appendMessage('bot', data.answer);
+
+                // If we received selection/process info, add buttons to view them
+                if (data.selected_sentences || data.process) {
+                    const controls = document.createElement('div');
+                    controls.className = 'msg-controls';
+
+                    const btn1 = document.createElement('button');
+                    btn1.className = 'mini-btn';
+                    btn1.textContent = 'View Selected Sentences';
+
+                    const btn2 = document.createElement('button');
+                    btn2.className = 'mini-btn';
+                    btn2.textContent = 'View Processing Details';
+
+                    controls.appendChild(btn1);
+                    controls.appendChild(btn2);
+                    botMsg.appendChild(controls);
+
+                    // Modal elements
+                    const sentencesModal = document.getElementById('sentences-modal');
+                    const processModal = document.getElementById('process-modal');
+                    const sentencesBody = document.getElementById('sentences-body');
+                    const processBody = document.getElementById('process-body');
+
+                    function openSentences() {
+                        // populate sentencesBody
+                        sentencesBody.innerHTML = '';
+                        const list = data.selected_sentences || [];
+                        if (list.length === 0) {
+                            sentencesBody.textContent = 'No sentences met the relevance threshold.';
+                        } else {
+                            list.forEach((s, idx) => {
+                                const wrapper = document.createElement('div');
+                                wrapper.className = 'sentence-item';
+                                const p = document.createElement('p');
+                                p.textContent = `${idx+1}. ${s.sentence}`;
+                                const meta = document.createElement('div');
+                                meta.className = 'sentence-meta';
+                                meta.textContent = `Score: ${s.score.toFixed(3)} | Tokens: ${s.tokens.join(' ')}`;
+                                wrapper.appendChild(p);
+                                wrapper.appendChild(meta);
+                                sentencesBody.appendChild(wrapper);
+                            });
+                        }
+                        sentencesModal.setAttribute('aria-hidden', 'false');
+                        sentencesModal.style.display = 'block';
+                    }
+
+                    function openProcess() {
+                        processBody.innerHTML = '';
+                        const proc = data.process || {};
+                        const ul = document.createElement('ul');
+                        ul.className = 'process-list';
+
+                        const addItem = (k, v) => {
+                            const li = document.createElement('li');
+                            li.innerHTML = `<strong>${k}:</strong> ${typeof v === 'object' ? JSON.stringify(v) : v}`;
+                            ul.appendChild(li);
+                        };
+
+                        addItem('Method', proc.method || '');
+                        addItem('Sentence count', proc.sentence_count || 0);
+                        addItem('Selected count', proc.selected_count || 0);
+                        addItem('Embedding dim', proc.embedding_dim || 0);
+                        addItem('Notes', proc.notes || '');
+                        if (proc.scores) addItem('Top scores', proc.scores);
+
+                        processBody.appendChild(ul);
+                        // Also show normalized tokens of the selected sentences if present
+                        if (data.selected_sentences && data.selected_sentences.length) {
+                            const hdr = document.createElement('h5');
+                            hdr.textContent = 'Normalized tokens for selected sentences:';
+                            processBody.appendChild(hdr);
+                            data.selected_sentences.forEach((s, idx) => {
+                                const d = document.createElement('div');
+                                d.className = 'norm-item';
+                                d.innerHTML = `<strong>${idx+1}.</strong> ${s.normalized_tokens.join(' ')}`;
+                                processBody.appendChild(d);
+                            });
+                        }
+
+                        processModal.setAttribute('aria-hidden', 'false');
+                        processModal.style.display = 'block';
+                    }
+
+                    btn1.addEventListener('click', openSentences);
+                    btn2.addEventListener('click', openProcess);
+
+                    // Close buttons
+                    document.getElementById('close-sentences').addEventListener('click', () => {
+                        document.getElementById('sentences-modal').style.display = 'none';
+                    });
+                    document.getElementById('close-process').addEventListener('click', () => {
+                        document.getElementById('process-modal').style.display = 'none';
+                    });
+                }
         } else {
             appendMessage('bot', `Error: ${data.error}`);
         }

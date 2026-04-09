@@ -91,6 +91,15 @@ def detect_sections(text):
     return {k: " ".join(v) for k, v in sections.items()}
 
 def retrieve_context(query, text, sections, top_k=5, threshold=0.20):
+    """Return a context object with selected sentences and processing details.
+
+    Returns a dict:
+      {
+        'context': <joined selected sentences>,
+        'selected_sentences': [ { 'sentence': str, 'score': float, 'tokens': [..], 'normalized_tokens': [..] }, ... ],
+        'process': { 'sentence_count': int, 'selected_count': int, 'embedding_dim': int, 'notes': str }
+      }
+    """
     query_lower = query.lower()
 
     if any(w in query_lower for w in ["judgment", "decide", "result", "held",
@@ -109,16 +118,42 @@ def retrieve_context(query, text, sections, top_k=5, threshold=0.20):
 
     sentences = preprocess_text(search_text)
     if not sentences:
-        return ""
+        return {'context': '', 'selected_sentences': [], 'process': {'sentence_count': 0, 'selected_count': 0, 'embedding_dim': 0, 'notes': 'No sentences extracted.'}}
 
+    # Embeddings
     sent_embs = embedder.encode(sentences)
     query_emb = embedder.encode([query])
-    scores    = cosine_similarity(query_emb, sent_embs)[0]
+    scores = cosine_similarity(query_emb, sent_embs)[0]
 
     top_indices = scores.argsort()[-top_k:][::-1]
-    context_sentences = [sentences[i] for i in top_indices if scores[i] >= threshold]
 
-    return " ".join(context_sentences)
+    selected = []
+    for i in top_indices:
+        if scores[i] >= threshold:
+            sent = sentences[i]
+            # Tokenization and simple normalization
+            tokens = nltk.word_tokenize(sent)
+            normalized_tokens = [re.sub(r"[^\w']", '', t).lower() for t in tokens if re.sub(r"[^\w']", '', t)]
+
+            selected.append({
+                'sentence': sent,
+                'score': float(scores[i]),
+                'tokens': tokens,
+                'normalized_tokens': normalized_tokens
+            })
+
+    context_text = " ".join([s['sentence'] for s in selected])
+
+    process = {
+        'method': 'SentenceTransformer(all-MiniLM-L6-v2)',
+        'sentence_count': len(sentences),
+        'selected_count': len(selected),
+        'embedding_dim': int(sent_embs.shape[1]) if hasattr(sent_embs, 'shape') and len(sent_embs.shape) > 1 else 0,
+        'notes': 'Tokenization: NLTK word_tokenize -> normalization: remove punctuation & lowercase -> segmentation: sent_tokenize used -> vector semantics: cosine similarity between query and sentence embeddings.' ,
+        'scores': [float(scores[i]) for i in top_indices]
+    }
+
+    return {'context': context_text, 'selected_sentences': selected, 'process': process}
 
 def synthesize_answer(query, context):
     if not context.strip():
@@ -222,13 +257,16 @@ def query_doc():
         sections = DOCUMENTS_DB[doc_id]
         text = RAW_TEXT_DB[doc_id]
         
-        context = retrieve_context(query, text, sections)
+        context_obj = retrieve_context(query, text, sections)
+        context = context_obj.get('context', '')
         answer = synthesize_answer(query, context)
         q_type = detect_question_type(query)
         
         return jsonify({
             'answer': answer,
-            'question_type': q_type
+            'question_type': q_type,
+            'selected_sentences': context_obj.get('selected_sentences', []),
+            'process': context_obj.get('process', {})
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
